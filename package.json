@@ -1,0 +1,32 @@
+{
+  "name": "globalRegistry-api",
+  "version": "0.0.1",
+  "description": "Client Library for Global Registry Web Services",
+  "main": "globalRegistry-api.js",
+  "scripts": {
+    "test": "make test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/appdevdesigns/globalRegistry-api.git"
+  },
+  "keywords": [
+    "Global",
+    "Registry"
+  ],
+  "author": "Johnny Hausman",
+  "license": "GPLv3",
+  "bugs": {
+    "url": "https://github.com/appdevdesigns/globalRegistry-api/issues"
+  },
+  "homepage": "https://github.com/appdevdesigns/globalRegistry-api",
+  "dependencies": {
+    "async": "^0.8.0",
+    "ad-utils": "git://github.com/appdevdesigns/ad-utils",
+    "request": "^2.34.0"
+  },
+  "devDependencies": {
+    "mocha": "~1.12.1",
+    "chai": "~1.7.2"
+  }
+}
