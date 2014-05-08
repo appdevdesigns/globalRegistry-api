@@ -459,7 +459,7 @@ module.exports={
         data:{
             entity_type: {
                 id:1,
-                name:'destroyName',
+                name:'destr0yName',
                 description:'destroyDescription',
                 field_type:'destroyFieldType'
             }
