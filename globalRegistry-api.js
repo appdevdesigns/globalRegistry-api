@@ -1,4 +1,4 @@
-/************************************************************************/
+/***********************************************************************/
 /**
  * @class GR
  * Johnny Hausman <johnny@appdevdesigns.net>
@@ -42,6 +42,11 @@ var GR = function (opts, testAD) {
     if (typeof module != 'undefined' && module.exports) {
         this.jar = require('request').jar();
     }
+
+
+    // Now attach our Entity object and instantiate our GR
+    this.Entity = Entity;
+    this.Entity.GR = this;
 };
 
 
@@ -64,17 +69,20 @@ if (typeof module != 'undefined' && module.exports) {
  */
 GR.prototype.request = function (opts) {
 
+        // data: (typeof opts.data != 'undefined') ?
+        //         JSON.stringify(opts.data) : opts.data,
+
     var reqParams = {
         url: this.opts.grBase + opts.path,
         type: opts.method,
-        data: (typeof opts.data != 'undefined') ?
-                JSON.stringify(opts.data) : opts.data,
+        data: opts.data,
         dataType: opts.dataType || 'json',
         contentType: 'application/json',
         cache: false,
         headers: { 
             'Authorization': 'Bearer '+this.opts.accessToken,
-            'Accept' : 'application/json' 
+            'Accept' : 'application/json',
+            'Content-type' : 'application/json' 
         }
     };
 
@@ -710,3 +718,210 @@ var ObjGetSet = function(self, key, val) {
         return self._data[key];
     }
 }
+
+
+var Entity = {
+
+    GR:null,
+
+    _entityTypes:null,
+
+    instance:function(type, data) {
+
+        var instance = new Entity(type, data);
+        instance.GR = this.GR;
+
+        return instance;
+    },
+
+    /*
+     * @function create
+     *
+     * @param {string} type the entity_type of the data to create
+     *                      (optional) if not given, then entity_type must be
+     *                      a field in the data.
+     * @param {json/array} data the data of the entity to create.
+     * @return {deferred}
+     */
+    create:function(type, data) {
+        var dfd = AD.sal.Deferred();
+
+        if (typeof data == 'undefined') {
+            data = type;
+            type = null;
+        }
+
+        if (!type) {
+            type = data.entity_type;
+            delete data.entity_type;
+        }
+
+        if (!type) {
+            AD.log.error('<bold>GlobalRegistryAPI</bold> error creating Entity: no entity_type provided!', type, data);
+        }
+
+        var reqData = {
+            entity: {}
+        }
+        reqData.entity[type] = data;
+
+        // if( Object.prototype.toString.call( data ) !== '[object Array]' ) {
+        //     data = [data];
+        // }
+
+        var reqOptions = {
+            path:'entities',
+            method:'post',
+            data:reqData
+        }
+        this.GR.request(reqOptions)
+        .fail(function(err){
+            AD.log.error('<bold>GlobalRegistryAPI</bold> error creating Entity['+type+']', err, reqOptions, this );
+            dfd.reject(err);
+        })
+        .then(function(dataBack){
+            // returned structure:
+            // {
+            //     entity:{
+            //         [type]:{
+            //             data:here
+            //         }
+            //     }
+            // }
+            var liveData = AD.sal.extend({}, data, dataBack.entity[type]);
+console.log('... liveData:', liveData);
+            var entityInstance = _this.GR.Entity.instance(type, liveData);
+            dfd.resolve(entityInstance);
+        });
+
+
+        return dfd;
+    }
+}
+
+/*
+// Searching:
+// 
+GR.Entity._entityTypes = [];
+
+GR.Entity.instance({json});
+
+GR.Entity.find({id:abcd})
+.then(function(person){
+    person.set('first_name', 'Neo');
+    person.save();
+})
+
+GR.Entity.findOne(id)
+.then(function(person){
+    person.set('first_name', 'Neo');
+    person.save();
+})
+
+GR.Entity.create({json def})
+GR.Entity.update(id, {json.values})
+GR.Entity.destroy(id)
+
+
+// an instance:
+entityInstance.save()  // -> .create() or .update()
+entityInstance.destroy() // .destroy()
+
+eI.get('first_name');
+eI.set('first_name', value);
+
+eI.set({ first_name:'value' })
+
+*/
+
+
+
+var EntityMerge = function(data, newData) {
+
+    for(var v in newData) {
+        var value = newData[v];
+
+        // if value is an array
+            // if 1st entry is an object
+                // forEach object:
+                    // find my this.data[v] entry with same client_integration_id
+                    // send both of those to EntityMerge( myCurrentValue, newObject)
+            // else 
+                // an array of non entities:
+                // update this.data[v] = value;
+            // end if
+        // else if value is an object
+        // else 
+            // current this.data[v] = value;
+        // end if
+    }
+}
+
+var Entity = function(type, data) {
+    var _this = this;
+
+    this.GR = null;
+    this.type = type;   // the specific entity key ('person')
+    this.data = data;   // the data for that entity
+
+}
+
+
+Entity.prototype.get = function(key) {
+
+    var value = this.data[key];
+    // if value is an object
+        // return a this.GR.Entity.instance(key, value)
+    // else if value is an array
+        // need to return an array of Entities:
+        // var returnArray = [];
+        // this.data[key].forEach(obj) {
+            // returnArray.push( new Entity.instance(key, obj))
+        // }
+        // return returnArray;
+    // else 
+        // return value;
+    // end if
+}
+
+
+Entity.prototype.set = function(key, value) {
+
+    // if value is of type Entity
+        // value = value.data;
+    // end if
+    // this.data[key] = value;
+}
+
+
+Entity.prototype.save = function() {
+    var dfd = AD.sal.Deferred();
+    var _this = this;
+
+    // a .create() will actually perform an .update() if
+    // the entry is already found. So we can just perform
+    // a .create() on both create/update operations.
+    this.GR.Entity.create(this.type, this.data)
+    .fail(function(err){
+        dfd.reject(err);
+    })
+    .then(function(returnData) {
+
+        // returnData is an instance of Entity with the data returned:
+
+        // make sure returned data is reflected in our data copy
+        EntityMerge(_this.data, returnData.data);
+
+        // pass the updated data on 
+        dfd.resolve(returnData.data);
+    })
+
+    return dfd;
+}
+
+
+//// LEFT OFF
+//// + test the returnData from the Entity.create()
+//// + implement EntityMerge
+//// + update LHRISRen.toGR() to create a new Entity and Entity.save() it
+//// + implement Entity.prototype.destroy()

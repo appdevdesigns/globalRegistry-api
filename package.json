@@ -21,9 +21,9 @@
   },
   "homepage": "https://github.com/appdevdesigns/globalRegistry-api",
   "dependencies": {
-    "async": "^0.8.0",
     "ad-utils": "git://github.com/appdevdesigns/ad-utils",
-    "request": "^2.34.0"
+    "async": "^0.8.0",
+    "request": "^2.69.0"
   },
   "devDependencies": {
     "mocha": "~1.12.1",
